@@ -12,6 +12,11 @@ pub struct InlineKeyboardButton {
     /// Label text on the button.
     pub text: String,
 
+    /// Garvis patch: a custom emoji shown before the label (Bot API
+    /// `icon_custom_emoji_id`, which this teloxide-core release predates).
+    #[serde(default)]
+    pub icon_custom_emoji_id: Option<String>,
+
     #[serde(flatten)]
     pub kind: InlineKeyboardButtonKind,
 }
@@ -111,7 +116,14 @@ impl InlineKeyboardButton {
     where
         S: Into<String>,
     {
-        Self { text: text.into(), kind }
+        Self { text: text.into(), icon_custom_emoji_id: None, kind }
+    }
+
+    /// The same button with a custom emoji before its label.
+    #[must_use]
+    pub fn with_icon(mut self, custom_emoji_id: impl Into<String>) -> Self {
+        self.icon_custom_emoji_id = Some(custom_emoji_id.into());
+        self
     }
 
     /// Constructor for `InlineKeyboardButton` with [`Url`] kind.

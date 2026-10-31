@@ -49,6 +49,17 @@ where
     process_response(response).await
 }
 
+/// Garvis patch: one place where an application may rewrite the JSON of every Bot API
+/// request (given the bot token and method), e.g. to give texts and buttons custom emoji.
+/// Multipart requests are not passed through it.
+static REQUEST_HOOK: std::sync::OnceLock<fn(&str, &str, Vec<u8>) -> Vec<u8>> =
+    std::sync::OnceLock::new();
+
+/// Installs the request hook once for the process; later calls are ignored.
+pub fn set_request_hook(hook: fn(&str, &str, Vec<u8>) -> Vec<u8>) {
+    let _ = REQUEST_HOOK.set(hook);
+}
+
 pub async fn request_json<T>(
     client: &Client,
     token: &str,
@@ -72,6 +83,10 @@ where
     //
     // [#460]: https://github.com/teloxide/teloxide/issues/460
     let method_name = method_name.trim_end_matches("Inline");
+    let params = match REQUEST_HOOK.get() {
+        Some(hook) => hook(token, method_name, params),
+        None => params,
+    };
 
     let request = client
         .post(crate::net::method_url(api_url, token, method_name))
